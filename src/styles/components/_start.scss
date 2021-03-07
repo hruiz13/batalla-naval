@@ -1,0 +1,40 @@
+.start__main{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: $bgColor;
+    margin: 0px;
+    height: 100vh;
+    width: 100vw;
+}
+
+.start__box-container{
+    background-color: $light;
+    box-shadow: 0px 3px $secundary;
+    border-radius: 2px;
+    padding: 20px;
+    width: 250px;
+}
+
+.start__title{
+    color: darken($color: $primary, $amount: 25);
+    margin-bottom: 20px;
+}
+
+.start__input{
+    color: $secundary;
+    background-color: transparent;
+    border: 0px;
+    border-bottom: 1px solid $bgColor;
+    font-size: 16px;
+    margin-bottom: 10px;
+    height: 25px;
+    width: 100%;
+    transition: border-bottom .3s ease;
+
+    &:focus{
+        border-bottom: 1px solid $primary;
+        outline: none;
+    }
+}
+

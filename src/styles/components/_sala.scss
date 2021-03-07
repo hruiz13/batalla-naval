@@ -1,0 +1,21 @@
+.sala__main-content{
+    display: flex;
+}
+.sala__topbar{
+    position: absolute;
+    left: 0;
+    top: 0;
+    background-color: $secundary;
+    color: white;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 40px;
+    width: 100%;
+}
+
+.sala__topbar-title{
+    font-size: 25px;
+    font-weight: 400;
+}
