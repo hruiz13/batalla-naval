@@ -1,5 +1,7 @@
 .sala__main-content{
     display: flex;
+    flex-direction: column;
+    margin-top: 40px;
 }
 .sala__topbar{
     position: absolute;
