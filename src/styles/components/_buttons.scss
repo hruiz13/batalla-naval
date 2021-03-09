@@ -27,6 +27,17 @@
         background-color: darken($color: $primary, $amount: 15)
     }
 }
+.btn-success{
+    background-color: $success;
+    border-radius: 2px;
+
+    &:disabled{
+        background-color: lighten($color: $success, $amount: 15);
+    }
+    &:hover:enabled{
+        background-color: darken($color: $success, $amount: 5)
+    }
+}
 
 .btn-barcos{
     display: flex;

@@ -6,7 +6,6 @@ export const SalaJuego = () => {
     return (
         <div className="sala__main-content">
             <TopNav />
-            Sala de juego
             <Tablero />
         </div>
     )
