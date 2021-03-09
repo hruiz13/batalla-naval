@@ -1,4 +1,7 @@
 import React, { useEffect, useState } from 'react'
+import Swal from 'sweetalert2';
+import socket from '../../Socketio';
+
 
 const barcosIniciales = [
     { id: 0, name: "Portaviones", size: 4, ident: 'P', vertical: false, puesto: false, pos: '-1', img: 'porta.svg' },
@@ -158,7 +161,7 @@ const ponerBarcoVertical = (tablero, barco, where, setBarcoNo, setBarcos) => {
 
 
 
-export const Tablero = () => {
+export const Tablero = ({ nick, sala }) => {
     const [tablero, setTablero] = useState([])
     const [barcoNo, setBarcoNo] = useState(0)
     const [barcos, setBarcos] = useState(barcosIniciales)
@@ -167,6 +170,7 @@ export const Tablero = () => {
     const [listo, setListo] = useState(false)
 
     const [tableroContrincante, setTableroContrincante] = useState([])
+    const [fires, setFires] = useState([])
 
 
     useEffect(() => {
@@ -206,18 +210,46 @@ export const Tablero = () => {
 
     const jugadorListo = () => {
         setListo(true)
+        const datos = { listo: true, nick, sala }
+        socket.emit('sala', datos);
     }
 
+    //recibe del bakend algo.
+    useEffect(() => {
+        socket.on('sala', jugada => {
+            if (jugada.fire) {
+                setFires([...fires, jugada])
+                setTablero(tab => {
+                    if (typeof tab[jugada.fire] === 'number') {
+                        tab[jugada.fire] = 'f'
+                    } else {
+                        tab[jugada.fire] = tab[jugada.fire]///////////////////////////
+                    }
+                    return tab
+                })
+
+            } else if (jugada.listo) {
+                Swal.fire('Tu oponente está listo.')
+            }
+        });
+        setBarcoNo(e => e + 1)
+        return () => { socket.off() }
+    }, [fires])
+
     const fire = (e) => {
-        console.log("Fire en ", e.target.id)
         e.target.className = 'tablero__bom'
+        const datos = { fire: e.target.id, sala }
+        socket.emit('sala', datos);
     }
 
     return (
         <div className="col">
             <div>
+                <div className="tablero__titulo" style={{ display: listo ? '' : 'none' }}>
+                    <h3>Mis barcos</h3>
+                </div>
                 <div className="tablero__titulo" style={{ display: listo ? 'none' : '' }}>
-                    <h3>Mis barcos {barcoNo}</h3>
+                    <h3>Mis barcos</h3>
                     <div className="tablero__barcos">
                         <div className="tablero__seleccionado">
                             <div>
@@ -245,11 +277,11 @@ export const Tablero = () => {
                         tablero.map((pos, index) => {
                             if (pos === 'O') {
                                 return <div key={index} className="tablero__estela" id={pos} ></div>
+                            } else if (pos === 'f') {
+                                return <div key={index} className="tablero__bom" id={pos} ></div>
                             } else if (typeof pos !== 'number') {
                                 if (pos.slice(-1) === 'i') {
                                     const id = Number(pos.slice(1, 2));
-
-
                                     switch (pos.slice(0, 1)) {
                                         case 'P':
                                             return <div key={index} style={{ transform: barcos[id].vertical ? 'rotate(-90deg)' : '' }} className="tablero__barco" id={pos} ><img className="tablero__portaviones" src='./img/porta.svg' alt="barcos" /></div>
@@ -279,6 +311,12 @@ export const Tablero = () => {
             </div>
             <div>
                 <h3> Aguas de mi oponente</h3>
+                {
+                    fires.map((fire, i) => {
+
+                        return <span key={i}>{fire.fire}</span>
+                    })
+                }
                 <div className="tablero__main">
                     {
                         tableroContrincante.map((pos, index) => {

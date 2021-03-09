@@ -6,7 +6,8 @@ Utilizaré
 -React
 -sass
 -react-router-doom
--Redux
+-Socket-io
+-query-string
 
 ## Creado por hruiz.com
 
