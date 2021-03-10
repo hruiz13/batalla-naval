@@ -24,9 +24,24 @@
     background-color: lighten($color: $agua, $amount: 3);
     border: 0.5px solid darken($color: $agua, $amount: 5)
 }
+.tablero__barco__bom{
+    position: relative;
+    background-color: orange;
+    border: 0.5px solid darken($color: $agua, $amount: 5);
+}
+.tablero__barco__dead{
+    position: relative;
+    background-color: $danger;
+    border: 0.5px solid darken($color: $agua, $amount: 5);
+}
 .tablero__estela{
     background-color: lighten($color: $agua, $amount: 2);
-    border: 0.5px solid darken($color: $agua, $amount: 5)
+    border: 0.5px solid darken($color: $agua, $amount: 5);
+}
+.tablero__miss{
+    background-color: $light;
+    border: 0.5px solid darken($color: $agua, $amount: 5);
+    pointer-events: none;
 }
 
 .tablero__titulo{

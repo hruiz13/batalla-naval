@@ -1,7 +1,6 @@
 import React from 'react'
 import { Tablero } from './sala/Tablero'
 import { TopNav } from './sala/TopNav'
-import socket from '../Socketio';
 import queryString from 'query-string';
 import { useHistory, useLocation } from 'react-router';
 
@@ -12,7 +11,7 @@ export const SalaJuego = () => {
     if (!sala) {
         history.push('/');
     }
-    socket.emit('conectado', { nick, sala });
+    //socket.emit('conectado', { nick, sala });
     return (
         <div className="sala__main-content">
             <TopNav />
