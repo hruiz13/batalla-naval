@@ -7,7 +7,7 @@ import { useHistory, useLocation } from 'react-router';
 export const SalaJuego = () => {
     const location = useLocation();
     const history = useHistory()
-    const { nick, sala } = queryString.parse(location.search)
+    const { nick, sala, sl } = queryString.parse(location.search)
     if (!sala) {
         history.push('/');
     }
@@ -15,7 +15,7 @@ export const SalaJuego = () => {
     return (
         <div className="sala__main-content">
             <TopNav />
-            <Tablero nick={nick} sala={sala} />
+            <Tablero nick={nick} sala={sala} sl={sl} />
         </div>
     )
 }

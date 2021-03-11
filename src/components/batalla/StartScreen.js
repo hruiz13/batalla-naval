@@ -1,5 +1,5 @@
-import React, { useState } from 'react'
-import { useHistory } from 'react-router-dom';
+import React, { useEffect, useState } from 'react'
+import { useHistory, useParams } from 'react-router-dom';
 const nod = require("node-code-generator")
 
 var generator = new nod();
@@ -9,7 +9,18 @@ const code = generator.randomChars(allowedChars, howMany);
 
 export const StartScreen = () => {
     const [nick, setNick] = useState('');
+    const [sala, setSala] = useState('')
     const history = useHistory()
+    const { salaId } = useParams();
+
+    useEffect(() => {
+        if (salaId) {
+            setSala(`?sala=${salaId}&nick=${nick}&sl=1`)
+        } else {
+            setSala(`?sala=${code}&nick=${nick}`)
+        }
+    }, [salaId, nick])
+
 
     const handleChange = (e) => {
         setNick(e.target.value)
@@ -18,11 +29,10 @@ export const StartScreen = () => {
     const handleSubmit = (e) => {
         e.preventDefault();
         if (nick !== "") {
-            console.log(nick + " Sala: " + code);
 
             history.push({
                 pathname: '/sala',
-                search: `?sala=${code}&nick=${nick}`,
+                search: sala,
                 state: {
                     update: true,
                 },

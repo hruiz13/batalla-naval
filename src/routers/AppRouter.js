@@ -15,14 +15,14 @@ export const AppRouter = () => {
                 <Switch>
 
                     <Route
-                        exact path="/"
-                        component={StartScreen}
-                    />
-                    <Route
                         exact path="/sala"
                         component={SalaJuego}
                     />
 
+                    <Route
+                        exact path="/:salaId?"
+                        component={StartScreen}
+                    />
                     <Redirect to='/' />
 
                 </Switch>
