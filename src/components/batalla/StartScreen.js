@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react'
-import { useHistory, useParams } from 'react-router-dom';
+import { useHistory, useLocation, useParams } from 'react-router-dom';
+import Swal from 'sweetalert2';
+import queryString from 'query-string';
 const nod = require("node-code-generator")
 
 var generator = new nod();
@@ -12,14 +14,20 @@ export const StartScreen = () => {
     const [sala, setSala] = useState('')
     const history = useHistory()
     const { salaId } = useParams();
+    const location = useLocation();
+    const { ocupado } = queryString.parse(location.search)
 
+    //entrada inicial.
     useEffect(() => {
         if (salaId) {
             setSala(`?sala=${salaId}&nick=${nick}&sl=1`)
         } else {
             setSala(`?sala=${code}&nick=${nick}`)
         }
-    }, [salaId, nick])
+        if (ocupado) {
+            Swal.fire('En la sala ya hay 2 jugadores.')
+        }
+    }, [salaId, nick, ocupado])
 
 
     const handleChange = (e) => {

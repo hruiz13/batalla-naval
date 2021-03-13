@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { useHistory } from 'react-router';
 import Swal from 'sweetalert2';
 import socket from '../../Socketio';
 import { barcosIniciales, ponerBarcoHorizontal, ponerBarcoVertical } from './helpers/barcos'
@@ -20,13 +21,17 @@ export const Tablero = ({ nick, sala, emite, sl }) => {
     const [barcoSeleccionado, setBarcoSeleccionado] = useState(0) //es el barco seleccionado
     const [btnListo, setBtnListo] = useState(false) //estado del boton listos.
     const [listo, setListo] = useState(false) //Estado si el jugadopr esta listo
+    const [girar, setGirar] = useState(true)
 
     const [tableroContrincante, setTableroContrincante] = useState([]) //tablero del contrincante
     const [destruidos, setDestruidos] = useState(0) //cantidad de barcos destruidos
     const [fires, setFires] = useState([]) //tiros
     const [hayCompa, setHayCompa] = useState(sl) //si el compa esta conectado o no.
     const [compaListo, setCompaListo] = useState(false) //si el compa esta listo.
-    const [turno, setTurno] = useState(false)
+    const [turno, setTurno] = useState(false) //a quiern le toca el turno
+    const [compa, setCompa] = useState('') //El nombre del compañero
+
+    const history = useHistory()
 
 
     //useEffect inicial
@@ -37,16 +42,16 @@ export const Tablero = ({ nick, sala, emite, sl }) => {
     }, [nick, sala])
 
     useEffect(() => {
-        // let listos = true
-        // barcos.forEach(barco => {
-        //     if (barco.pos === '-1') {
-        //         listos = false
-        //     }
-        // })
-        // if (listos) {
-        //     setBtnListo(true)
-        // }
-        setBtnListo(true)
+        let listos = true
+        barcos.forEach(barco => {
+            if (barco.pos === '-1') {
+                listos = false
+            }
+        })
+        if (listos) {
+            setBtnListo(true)
+        }
+        //setBtnListo(true)
 
 
     }, [barcoNo, barcos])
@@ -59,21 +64,26 @@ export const Tablero = ({ nick, sala, emite, sl }) => {
         } else {
             setTablero(ponerBarcoVertical(tablero, barcos[barcoSeleccionado], e.target.id, setBarcoNo, setBarcos))
         }
+        setGirar(false)
     }
 
     const voltearBarco = () => {
-        setBarcos(barcos.map(barco => {
-            if (barco.id === Number(barcoSeleccionado)) {
-                barco.vertical = !barco.vertical
+        if (girar) {
+            setBarcos(barcos.map(barco => {
+                if (barco.id === Number(barcoSeleccionado)) {
+                    barco.vertical = !barco.vertical
+                    return barco
+                }
                 return barco
-            }
-            return barco
-        }))
+            }))
+        }
 
     }
 
     const seleccionarBarco = (e) => {
+        setGirar(true)
         setBarcoSeleccionado(e.target.id)
+
     }
 
     const jugadorListo = () => {
@@ -85,36 +95,33 @@ export const Tablero = ({ nick, sala, emite, sl }) => {
     //recibe del bakend algo.
     useEffect(() => {
         socket.on('sala', jugada => {
+            if (jugada.noEntras) {
+                //Si ya hay 2 personas
 
-            if (jugada.todos) {
-                console.log(jugada.todos)
+                history.push({
+                    pathname: '/',
+                    search: '?ocupado=true',
+                    state: {
+                        update: true,
+                    },
+                });
             }
 
-
-            console.log("Le toca a ", jugada.turno)
             if (jugada.turno) {
-                console.log("Quien soy? ", sl)
                 if (sl === '1') { //soy false
-                    console.log("a) Le toca a HOST")
                     setTurno(false)
                 } else {
-                    console.log("a) Le toca a INVITADO")
                     setTurno(true)
                 }
             } else {
-                //console.log("Le toca a ", jugada.turno)
-                console.log("Quien sigo siendo? ", sl)
                 if (sl === '1') { //soy false
-                    console.log("b) Le toca a INVITADO")
                     setTurno(true)
                 } else {
-                    console.log("b) Le toca a HOST")
                     setTurno(false)
                 }
             }
 
             if (jugada.fire) {
-                //setTurno(e => !e)
 
                 //modificamos el tablero
                 const fuego = Number(jugada.fire)
@@ -153,7 +160,7 @@ export const Tablero = ({ nick, sala, emite, sl }) => {
                     //si esta emitimos diciendo cual. EMIT DESTRUIDO
                     if (barcosActual[numero].tiros === barcosActual[numero].size) {
                         barcosActual[numero].alive = false
-                        const datos = { sala, destruido: { size: barcosActual[numero].size, vertica: barcosActual[numero].vertical, pos: barcosActual[numero].pos, emite: nick } }
+                        const datos = { sala, destruido: { size: barcosActual[numero].size, vertical: barcosActual[numero].vertical, pos: barcosActual[numero].pos, emite: nick } }
                         socket.emit('sala', datos);
                         //sumamos un barco mas muerto
                         setDestruidos(destruidos => destruidos + 1)
@@ -185,11 +192,22 @@ export const Tablero = ({ nick, sala, emite, sl }) => {
             } else if (jugada.destruido) { //Cuando recibimos que destruimos un barco enemigo.
 
                 setTableroContrincante(tab => {
-                    for (let i = 0; i < jugada.destruido.size; i++) {
-                        if (jugada.destruido.vertical) {
-                            tableroContrincante[i + jugada.destruido.pos] = 'b'
-                        } else {
-                            tableroContrincante[i + jugada.destruido.pos] = 'b'
+                    if (jugada.destruido.vertical) {
+                        //let i = donde; i > (donde - (barco.size * 10)); i = i - 10
+                        for (let i = jugada.destruido.pos; i > (jugada.destruido.pos - (jugada.destruido.size * 10)); i = i - 10) {
+                            if (jugada.destruido.vertical) {
+                                tableroContrincante[i] = 'b'
+                            } else {
+                                tableroContrincante[i] = 'b'
+                            }
+                        }
+                    } else {
+                        for (let i = 0; i < jugada.destruido.size; i++) {
+                            if (jugada.destruido.vertical) {
+                                tableroContrincante[i + jugada.destruido.pos] = 'b'
+                            } else {
+                                tableroContrincante[i + jugada.destruido.pos] = 'b'
+                            }
                         }
                     }
                     return tab
@@ -205,148 +223,155 @@ export const Tablero = ({ nick, sala, emite, sl }) => {
 
             } else if (jugada.fin) { //Cuando recibimos si afectamos un barco
 
-                Swal.fire('Has Ganado la partida.')
+                Swal.fire('Has Ganado la partida!!!')
 
             } else if (jugada.dos) { //Cuando ya estan los 2 jugadores
                 //setTurno(true)
+                setCompa(jugada.quien)
                 setHayCompa(true)
                 //Swal.fire('Se ha unido el compa.')
+            } else if (jugada.quien) {
+                console.log(jugada.mismo)
+                setCompa(jugada.quien)
             }
             setBarcoNo(e => e + 1)
         });
         return () => {
             socket.off()
         }
-    }, [fires, tablero, destruidos, nick, sala, tableroContrincante, setFires])
+    }, [fires, tablero, destruidos, nick, sala, tableroContrincante, setFires, barcos, sl, history])
 
     const fire = (e) => {
-        console.log("NO ME TOCA")
         setTurno(false)
         e.target.className = 'tablero__miss'
         const datos = { sala, fire: e.target.id }
         socket.emit('sala', datos, emite);
     }
 
-    const mostrarTablero = () => {
-        console.log(turno)
-    }
+    // const mostrarTablero = () => {
+    //     console.log(turno)
+    // }
 
     return (
-        <div className="col">
-            <div>
-                <div className="tablero_tl_sp">
-                    <div className="tablero__titulo" style={{ display: listo ? '' : 'none' }}>
-                        <h3>Mis barcos</h3>
-                        <button onClick={mostrarTablero}>Console</button>
-                    </div>
-                    <div className="tablero__titulo" style={{ display: listo ? 'none' : '' }}>
-                        <h3>Mis barcos</h3>
-                        <div className="tablero__barcos">
-                            <div className="tablero__seleccionado">
-                                <div>
-                                    {barcos[barcoSeleccionado].name}
-                                </div>
-                                <span>Cantidad de celdas: {barcos[barcoSeleccionado].size}</span>
-                                <span>click en el barco para rotar</span>
-                                <img className="tablero__imgBarco" style={{ transform: barcos[barcoSeleccionado].vertical ? 'rotate(-90deg)' : '' }} src={`./img/${barcos[barcoSeleccionado].img}`} alt="barcoSelected" onClick={voltearBarco} />
-                            </div>
-                            <div className="tablero__lista">
+        <div>
+            <div className="tablero__turno"> Turno de:  <span>{turno ? nick : compa}</span></div>
 
-                                {
-                                    barcos.map(barco => {
-                                        return <button key={barco.id} style={barco.puesto ? { backgroundColor: '#037971' } : {}} className="btn btn-barcos" onClick={seleccionarBarco} id={barco.id}>{barco.name}</button>
-                                    })
-
-                                }
-                            </div>
+            <div className="col">
+                <div>
+                    <div className="tablero_tl_sp">
+                        <div className="tablero__titulo" style={{ display: listo ? '' : 'none' }}>
+                            <h3>Mis barcos</h3>
+                            {/* <button onClick={mostrarTablero}>Console</button> */}
                         </div>
-                        <button className="btn btn-success" disabled={!btnListo} onClick={jugadorListo}>{!btnListo ? 'Desplegando flota!' : 'Listos'}</button>
+                        <div className="tablero__titulo" style={{ display: listo ? 'none' : '' }}>
+                            <h3>Mis barcos</h3>
+                            <div className="tablero__barcos">
+                                <div className="tablero__seleccionado">
+                                    <div>
+                                        {barcos[barcoSeleccionado].name}
+                                    </div>
+                                    <span>Cantidad de celdas: {barcos[barcoSeleccionado].size}</span>
+                                    <span>click en el barco para rotar</span>
+                                    <img className="tablero__imgBarco" style={{ transform: barcos[barcoSeleccionado].vertical ? 'rotate(-90deg)' : '' }} src={`./img/${barcos[barcoSeleccionado].img}`} alt="barcoSelected" onClick={voltearBarco} />
+                                </div>
+                                <div className="tablero__lista">
+
+                                    {
+                                        barcos.map(barco => {
+                                            return <button key={barco.id} style={barco.puesto ? { backgroundColor: '#037971' } : {}} className="btn btn-barcos" onClick={seleccionarBarco} id={barco.id}>{barco.name}</button>
+                                        })
+
+                                    }
+                                </div>
+                            </div>
+                            <button className="btn btn-success" disabled={!btnListo} onClick={jugadorListo}>{!btnListo ? 'Desplegando flota!' : 'Listos'}</button>
+                        </div>
+                    </div>
+                    <div className="tablero__main">
+                        {
+                            tablero.map((pos, index) => {
+                                if (pos === 'O') {
+                                    return <div key={index} className="tablero__estela" id={pos} ></div>
+                                } else if (pos === 'f') {
+                                    return <div key={index} className="tablero__miss" id={pos} ></div>
+                                } else if (typeof pos !== 'number') {
+                                    if (pos.slice(-1) === 'i') { //ultimo digito
+                                        const id = Number(pos.slice(1, 2));//despues de la letra inicial
+                                        const fir = pos.slice(-2, -1) //antes de la i
+                                        switch (pos.slice(0, 1)) {
+                                            case 'P':
+                                                return <div key={index} style={{ transform: barcos[id].vertical ? 'rotate(-90deg)' : '' }} className={fir === 'f' ? "tablero__barco__bom" : "tablero__barco"} id={pos} ><img style={{ opacity: barcos[id].alive ? "" : ".5" }} className="tablero__portaviones" src='./img/porta.svg' alt="barcos" /></div>
+                                            case 'S':
+                                                return <div key={index} style={{ transform: barcos[id].vertical ? 'rotate(-90deg)' : '' }} className={fir === 'f' ? "tablero__barco__bom" : "tablero__barco"} id={pos} ><img style={{ opacity: barcos[id].alive ? "" : ".5" }} className="tablero__submarino" src='./img/sub.svg' alt="barcos" /></div>
+                                            case 'A':
+                                                return <div key={index} style={{ transform: barcos[id].vertical ? 'rotate(-90deg)' : '' }} className={fir === 'f' ? "tablero__barco__bom" : "tablero__barco"} id={pos} ><img style={{ opacity: barcos[id].alive ? "" : ".5" }} className="tablero__artillero" src='./img/art.svg' alt="barcos" /></div>
+                                            case 'R':
+                                                return <div key={index} style={{ transform: barcos[id].vertical ? 'rotate(-90deg)' : '' }} className={fir === 'f' ? "tablero__barco__bom" : "tablero__barco"} id={pos} ><img style={{ opacity: barcos[id].alive ? "" : ".5" }} className="tablero__rescate" src='./img/res.svg' alt="barcos" /></div>
+                                            default:
+                                                return <div key={index} style={{ transform: barcos[id].vertical ? 'rotate(-90deg)' : '' }} className={fir === 'f' ? "tablero__barco__bom" : "tablero__barco"} id={pos} ><img style={{ opacity: barcos[id].alive ? "" : ".5" }} className="tablero__rescate" src='./img/res.svg' alt="barcos" /></div>
+
+                                        }
+
+                                    } else if (pos.slice(-1) === 'f') { //ultimo digito
+                                        if ((pos.slice(0, 1) !== 'O' || typeof pos.slice(0, 1) === 'number') && pos.slice(0, 1) !== 'f') {
+                                            return <div key={index} className="tablero__bom" id={pos}></div>
+                                        } else {
+                                            return <div key={index} className="tablero__miss" id={pos}></div>
+                                        }
+                                    } else {
+                                        return <div key={index} className="tablero__barco" id={pos}></div>
+                                    }
+
+
+                                } else {
+                                    return <div key={index} className="tablero__agua" id={pos} onClick={ponerUnBarco}></div>
+                                }
+                            })
+                        }
+
                     </div>
                 </div>
-                <div className="tablero__main">
-                    {
-                        tablero.map((pos, index) => {
-                            if (pos === 'O') {
-                                return <div key={index} className="tablero__estela" id={pos} >{pos}</div>
-                            } else if (pos === 'f') {
-                                return <div key={index} className="tablero__miss" id={pos} >{pos}</div>
-                            } else if (typeof pos !== 'number') {
-                                if (pos.slice(-1) === 'i') { //ultimo digito
-                                    const id = Number(pos.slice(1, 2));//despues de la letra inicial
-                                    const fir = pos.slice(-2, -1) //antes de la i
-                                    switch (pos.slice(0, 1)) {
-                                        case 'P':
-                                            return <div key={index} style={{ transform: barcos[id].vertical ? 'rotate(-90deg)' : '' }} className={fir === 'f' ? "tablero__barco__bom" : "tablero__barco"} id={pos} ><img style={{ opacity: barcos[id].alive ? "" : ".5" }} className="tablero__portaviones" src='./img/porta.svg' alt="barcos" />{pos}</div>
-                                        case 'S':
-                                            return <div key={index} style={{ transform: barcos[id].vertical ? 'rotate(-90deg)' : '' }} className={fir === 'f' ? "tablero__barco__bom" : "tablero__barco"} id={pos} ><img style={{ opacity: barcos[id].alive ? "" : ".5" }} className="tablero__submarino" src='./img/sub.svg' alt="barcos" />{pos}</div>
-                                        case 'A':
-                                            return <div key={index} style={{ transform: barcos[id].vertical ? 'rotate(-90deg)' : '' }} className={fir === 'f' ? "tablero__barco__bom" : "tablero__barco"} id={pos} ><img style={{ opacity: barcos[id].alive ? "" : ".5" }} className="tablero__artillero" src='./img/art.svg' alt="barcos" />{pos}</div>
-                                        case 'R':
-                                            return <div key={index} style={{ transform: barcos[id].vertical ? 'rotate(-90deg)' : '' }} className={fir === 'f' ? "tablero__barco__bom" : "tablero__barco"} id={pos} ><img style={{ opacity: barcos[id].alive ? "" : ".5" }} className="tablero__rescate" src='./img/res.svg' alt="barcos" />{pos}</div>
-                                        default:
-                                            return <div key={index} style={{ transform: barcos[id].vertical ? 'rotate(-90deg)' : '' }} className={fir === 'f' ? "tablero__barco__bom" : "tablero__barco"} id={pos} ><img style={{ opacity: barcos[id].alive ? "" : ".5" }} className="tablero__rescate" src='./img/res.svg' alt="barcos" />{pos}</div>
-
-                                    }
-
-                                } else if (pos.slice(-1) === 'f') { //ultimo digito
-                                    if ((pos.slice(0, 1) !== 'O' || typeof pos.slice(0, 1) === 'number') && pos.slice(0, 1) !== 'f') {
-                                        return <div key={index} className="tablero__bom" id={pos}>{pos}</div>
-                                    } else {
-                                        return <div key={index} className="tablero__miss" id={pos}>{pos}</div>
-                                    }
-                                } else {
-                                    return <div key={index} className="tablero__barco" id={pos}>{pos}</div>
+                <div>
+                    <div className="tablero_tl_sp">
+                        <h3> Aguas de mi oponente</h3>
+                        {
+                            !compaListo && <span>Esperando que oponente despliegue la flota...</span>
+                        }
+                    </div>
+                    <div style={{ pointerEvents: compaListo && turno && listo ? 'auto' : 'none' }} className="tablero__main">
+                        {
+                            tableroContrincante.map((pos, index) => {
+                                if (pos === 'b') {
+                                    return <div key={index} className="tablero__barco__dead" id={pos} ></div>
                                 }
+                                else if (pos === 'a') {
+                                    return <div key={index} className="tablero__bom" id={pos} ></div>
+                                } else if (pos === 'f') {
+                                    return <div key={index} className="tablero__miss" id={pos} ></div>
+                                } else {
+                                    return <div key={index} className="tablero__agua" id={pos} onClick={fire}></div>
+                                }
+                            })
+                        }
 
 
-                            } else {
-                                return <div key={index} className="tablero__agua" id={pos} onClick={ponerUnBarco}>{pos}</div>
-                            }
-                        })
-                    }
-
+                    </div>
                 </div>
-            </div>
-            <div>
-                <div className="tablero_tl_sp">
-                    <h3> Aguas de mi oponente</h3>
-                    {
-                        !compaListo && <span>Esperando que oponente despliegue la flota...</span>
-                    }
-                </div>
-                <div style={{ pointerEvents: compaListo && turno ? 'auto' : 'none' }} className="tablero__main">
-                    {
-                        tableroContrincante.map((pos, index) => {
-                            if (pos === 'b') {
-                                return <div key={index} className="tablero__barco__dead" id={pos} ></div>
-                            }
-                            else if (pos === 'a') {
-                                return <div key={index} className="tablero__bom" id={pos} ></div>
-                            } else if (pos === 'f') {
-                                return <div key={index} className="tablero__miss" id={pos} ></div>
-                            } else {
-                                return <div key={index} className="tablero__agua" id={pos} onClick={fire}></div>
-                            }
-                        })
-                    }
 
+                {/* MODAL */}
+                <div id="myModal" style={{ display: hayCompa ? 'none' : 'block' }} className="modal">
 
-                </div>
-            </div>
+                    <div className="modal-content">
+                        <h1>Batalla Naval</h1>
+                        <h3>Juego en linea para 2</h3>
+                        <p>Envia el siguiente link a quien sera tu compañero de juego!</p>
+                        <h3>http://bn.hruiz.com/{sala}</h3>
+                        <p>Esperando el compañero..</p>
+                    </div>
 
-            {/* MODAL */}
-            <div id="myModal" style={{ display: hayCompa ? 'none' : 'block' }} className="modal">
-
-                <div className="modal-content">
-                    <h1>Batalla Naval</h1>
-                    <h3>Juego en linea para 2</h3>
-                    <p>Envia el siguiente link a quien sera tu compañero de juego!</p>
-                    <h3>http://batalla.hruiz.com/{sala}</h3>
-                    <p>Esperando el compañero..</p>
                 </div>
 
             </div>
-
         </div>
     )
 }

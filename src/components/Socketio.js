@@ -1,5 +1,7 @@
 import io from 'socket.io-client';
 
-let socket = io('//192.168.3.221:3001');
+const dirUrl = process.env.REACT_APP_DIR;
+
+let socket = io(dirUrl);
 
 export default socket;

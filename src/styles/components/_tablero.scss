@@ -110,3 +110,16 @@
 .tablero_tl_sp{
     margin: 15px
 }
+
+.tablero__turno{
+    display: flex;
+    justify-content: center;
+    color: white;
+    background-color: $success;
+    align-items: center;
+    & span{
+        font-size: 20px;
+        font-weight: 600;
+        margin-left: 15px;
+    }
+}
