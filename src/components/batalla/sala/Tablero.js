@@ -2,9 +2,12 @@ import React, { useEffect, useState } from 'react'
 import { useHistory } from 'react-router';
 import Swal from 'sweetalert2';
 import socket from '../../Socketio';
+import cloneDeep from 'lodash/cloneDeep';
 import { barcosIniciales, ponerBarcoHorizontal, ponerBarcoVertical } from './helpers/barcos'
 
 const barcosTotales = 8;
+
+const copiaBarcosIniciales = cloneDeep(barcosIniciales)
 
 const generarTablero = () => {
     let tablero = []
@@ -17,7 +20,7 @@ const generarTablero = () => {
 export const Tablero = ({ nick, sala, emite, sl }) => {
     const [tablero, setTablero] = useState([]) //es el tablero con sus numeros
     const [barcoNo, setBarcoNo] = useState(0)
-    const [barcos, setBarcos] = useState(barcosIniciales) //son todos los barcos que se utilizaran
+    const [barcos, setBarcos] = useState(copiaBarcosIniciales) //son todos los barcos que se utilizaran
     const [barcoSeleccionado, setBarcoSeleccionado] = useState(0) //es el barco seleccionado
     const [btnListo, setBtnListo] = useState(false) //estado del boton listos.
     const [listo, setListo] = useState(false) //Estado si el jugadopr esta listo
@@ -107,6 +110,28 @@ export const Tablero = ({ nick, sala, emite, sl }) => {
                 });
             }
 
+            //si ocurre una desconeccion del otro jugador recibimos este alert y nos hace refrescar la pagina.  RECIBE
+            if (jugada.reiniciar || jugada.again) {
+                Swal.fire({
+                    title: jugada.reiniciar ? 'Hubo un error con el compa, toca reiniciar el juego.' : 'Se acepto reiniciar juego.',
+                    showDenyButton: false,
+                    showCancelButton: false,
+                    confirmButtonText: `ok`,
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        setTablero(generarTablero())
+                        setTableroContrincante([])
+                        setTableroContrincante(generarTablero())
+                        setBarcoNo(0)
+                        setBarcos(cloneDeep(barcosIniciales))
+                        setBtnListo(false)
+                        setListo(false)
+                        setFires([])
+                        setCompaListo(false)
+                    }
+                })
+            }
+
             if (jugada.turno) {
                 if (sl === '1') { //soy false
                     setTurno(false)
@@ -121,7 +146,7 @@ export const Tablero = ({ nick, sala, emite, sl }) => {
                 }
             }
 
-            if (jugada.fire) {
+            if (jugada.fire) { //una jugada RECIBE
 
                 //modificamos el tablero
                 const fuego = Number(jugada.fire)
@@ -171,6 +196,38 @@ export const Tablero = ({ nick, sala, emite, sl }) => {
                             //el otro ha ganado.
                             const datos = { sala, fin: { ganador: 'tu' } }
                             socket.emit('sala', datos);
+                            Swal.fire({
+                                title: 'Se ha quedado sin flota! Desea jugar nuevamente?.',
+                                showDenyButton: true,
+                                showCancelButton: false,
+                                confirmButtonText: `ok`,
+                                denyButtonText: `No jugar mas`,
+
+                            }).then((result) => {
+                                if (result.isConfirmed) {
+                                    const datos = { sala, otraVez: true }
+                                    socket.emit('sala', datos);
+                                    //si aceptamos comenzar nuevamente
+                                    setTablero(generarTablero())
+                                    setTableroContrincante([])
+                                    setTableroContrincante(generarTablero())
+                                    setBarcoNo(0)
+                                    setBarcos(cloneDeep(barcosIniciales))
+                                    setBtnListo(false)
+                                    setListo(false)
+                                    setFires([])
+                                    setCompaListo(false)
+
+
+
+
+
+                                } else if (result.isDenied) {
+                                    const datos = { sala, otraVez: 'no' }
+                                    socket.emit('sala', datos);
+                                    //window.location.reload()
+                                }
+                            })
                         }
                     }
                     setBarcos(barcosActual)
@@ -184,12 +241,12 @@ export const Tablero = ({ nick, sala, emite, sl }) => {
 
 
 
-            } else if (jugada.listo) { //Cuando el oponente esta listo.
+            } else if (jugada.listo) { //Cuando el oponente esta listo. RECIBE 
                 //if()
                 setCompaListo(e => !e)
                 Swal.fire('Tu oponente está listo.')
 
-            } else if (jugada.destruido) { //Cuando recibimos que destruimos un barco enemigo.
+            } else if (jugada.destruido) { //Cuando recibimos que destruimos un barco enemigo. RECIBE
 
                 setTableroContrincante(tab => {
                     if (jugada.destruido.vertical) {
@@ -214,23 +271,41 @@ export const Tablero = ({ nick, sala, emite, sl }) => {
                 })
                 //Swal.fire('barco destruido.')
 
-            } else if (jugada.afecta) { //Cuando recibimos si afectamos un barco
+            } else if (jugada.afecta) { //Cuando recibimos si afectamos un barco RECIBE
 
                 setTableroContrincante(tab => {
                     tableroContrincante[jugada.afecta.fuego] = 'a'
                     return tab
                 })
 
-            } else if (jugada.fin) { //Cuando recibimos si afectamos un barco
+            } else if (jugada.fin) { //Cuando recibimos ganada de partida. RECIBE
 
-                Swal.fire('Has Ganado la partida!!!')
+                //Swal.fire('Has Ganado la partida!!!')
+                Swal.fire({
+                    title: 'Ha ganado la partida!! Desea jugar nuevamente?.',
+                    showDenyButton: true,
+                    showCancelButton: false,
+                    confirmButtonText: `ok`,
+                    denyButtonText: `No jugar mas`,
 
-            } else if (jugada.dos) { //Cuando ya estan los 2 jugadores
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        const datos = { sala, otraVez: true }
+                        socket.emit('sala', datos);
+                        //window.location.reload()
+                    } else if (result.isDenied) {
+                        const datos = { sala, otraVez: 'no' }
+                        socket.emit('sala', datos);
+                        //window.location.reload()
+                    }
+                })
+
+            } else if (jugada.dos) { //Cuando ya estan los 2 jugadores RECIBE
                 //setTurno(true)
                 setCompa(jugada.quien)
                 setHayCompa(true)
                 //Swal.fire('Se ha unido el compa.')
-            } else if (jugada.quien) {
+            } else if (jugada.quien) { //A quien le toca el turno RECIBE
                 console.log(jugada.mismo)
                 setCompa(jugada.quien)
             }
