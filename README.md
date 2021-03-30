@@ -10,7 +10,7 @@ Utilizaré
 -query-string
 
 ## Probar el juego en la siguiente pagina
-[https://bn.hruiz.com]https://bn.hruiz.com
+https://bn.hruiz.com
 
 ## Creado por hruiz.com
 
