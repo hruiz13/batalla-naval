@@ -113,7 +113,7 @@ export const Tablero = ({ nick, sala, emite, sl }) => {
             //si ocurre una desconeccion del otro jugador recibimos este alert y nos hace refrescar la pagina.  RECIBE
             if (jugada.reiniciar || jugada.again) {
                 Swal.fire({
-                    title: jugada.reiniciar ? 'Hubo un error con el compa, toca reiniciar el juego.' : 'Se acepto reiniciar juego.',
+                    title: jugada.reiniciar ? 'Hubo un error con el compa, o ha abandonado la partida.' : 'Se acepto reiniciar juego.',
                     showDenyButton: false,
                     showCancelButton: false,
                     confirmButtonText: `ok`,
@@ -193,7 +193,7 @@ export const Tablero = ({ nick, sala, emite, sl }) => {
                         setTurno(false)
                         //si matamos todos los barcos se acaba
                         if (destruidos === barcosTotales) {
-                            //el otro ha ganado.
+                            //el otro ha ganado. //EMIT EL OTRO GANA
                             const datos = { sala, fin: { ganador: 'tu' } }
                             socket.emit('sala', datos);
                             Swal.fire({
@@ -440,7 +440,7 @@ export const Tablero = ({ nick, sala, emite, sl }) => {
                         <h1>Batalla Naval</h1>
                         <h3>Juego en linea para 2</h3>
                         <p>Envia el siguiente link a quien sera tu compañero de juego!</p>
-                        <h3>http://bn.hruiz.com/{sala}</h3>
+                        <h3>https://bn.hruiz.com/{sala}</h3>
                         <p>Esperando el compañero..</p>
                     </div>
 
